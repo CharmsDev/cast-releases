@@ -9,3 +9,7 @@ Deprecated
 ### v0.2.0
 
 The current release.
+
+## Documentation
+
+[How To Use Cast](docs/howto/README.md)

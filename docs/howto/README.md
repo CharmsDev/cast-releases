@@ -1,4 +1,4 @@
-# Building a Trustless DEX on Bitcoin with ZK Proofs
+# How To Use Cast: a Trustless DEX on Bitcoin with Charms
 
 **TL;DR**: This guide demonstrates how to create, cancel, and fill orders on a fully trustless decentralized exchange
 running natively on Bitcoin. We'll trade [BRO](https://bro.charms.dev) tokens for sats—no bridges, no wrapped tokens, no custodians—just ZK proofs enforcing trade logic directly on the Bitcoin blockchain.
