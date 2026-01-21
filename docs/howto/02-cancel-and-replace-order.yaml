@@ -1,0 +1,98 @@
+# ==============================================================================
+# Spell: Cancel and Replace Order - Phase 2
+# ==============================================================================
+#
+# This spell cancels the existing order and creates a replacement with
+# partial fill enabled.
+#
+# Scenario:
+#   - Cancel the 50 BRO order (upgraded to v0.2 contract)
+#   - Combine with 49 BRO change from Phase 1
+#   - Create new order: 99 BRO for sale with partial fills
+#   - New price: 250 sats per BRO
+#
+# Funding UTXO: 2efcde0d11cca5c23a415de6cb917e6da5b747975911e7855eb29d0737a68873:2
+#   - 42,851 sats available for fees (change from upgrade tx)
+#
+# Scrolls nonce calculation:
+#   scrolls-nonce "2efcde0d11cca5c23a415de6cb917e6da5b747975911e7855eb29d0737a68873:2" 0
+#   -> 2592674606473911827
+#   curl "https://scrolls-v8.charms.dev/main/address/2592674606473911827"
+#   -> bc1qzhdm5ee85jk7xwsue2ewnp9eh886mqkg3sfsem
+#
+# ==============================================================================
+
+version: 9
+
+apps:
+  # Cast DEX v0.2 contract
+  $CAST: b/0000000000000000000000000000000000000000000000000000000000000000/a471d3fcc436ae7cbc0e0c82a68cdc8e003ee21ef819e1acf834e11c43ce47d8
+  # BRO token
+  $BRO: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f
+
+# ------------------------------------------------------------------------------
+# Private Inputs
+# ------------------------------------------------------------------------------
+
+private_inputs:
+  $CAST:
+    params:
+      - fulfill:
+          app: b/0000000000000000000000000000000000000000000000000000000000000000/a471d3fcc436ae7cbc0e0c82a68cdc8e003ee21ef819e1acf834e11c43ce47d8
+          fee_config:
+            taker_fee: 50
+            matcher_fee: 2000
+            fee_address: bc1qxxxjm06n50uugxewxe5r5w5tskqwq4gkwrm0al
+          min_value: 10000
+      - 20f0aa694f7382a64cce14ebffa9f62428d4655c4f53826f1b745b556205edda317b64649a68f214e3fd533929875e5576d6f9293cfda7ea80924ffeb16bbf07ea
+    edit_orders:
+      cancel:
+        # Cancellation signature for input 0 (the upgraded order)
+        # Generated with: cancel-msg message 02-cancel-and-replace-order.yaml "2efcde0d11cca5c23a415de6cb917e6da5b747975911e7855eb29d0737a68873:0" | xargs cancel-msg sign --xprv <XPRV> --path "0/4"
+        0: 1fff1122edd917b6d2fe7917a8e1e5febe87cb266159a6412c2bf4cefdc6d6f49f2f60a0c56e1e7dd6dbec62cca75196da2bf0ddf55e9593fc1ae1512d09eed283
+
+# ------------------------------------------------------------------------------
+# Inputs
+# ------------------------------------------------------------------------------
+
+ins:
+  # Input 0: The upgraded order to cancel (50 BRO at v0.2 contract)
+  - utxo_id: 2efcde0d11cca5c23a415de6cb917e6da5b747975911e7855eb29d0737a68873:0
+    charms:
+      $BRO: 5000000000
+      $CAST:
+        maker: bc1qvlxzrdx5q8e56vpf45hae85kg8vjrze9qceada
+        exec_type: all_or_none
+        side: ask
+        price: [1, 500000]
+        amount: 10000
+        quantity: 5000000000
+        asset:
+          token: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f
+
+  # Input 1: BRO change from Phase 1 (49 BRO)
+  - utxo_id: b0751a9e34e4cc0663b6361dcd7b9acc69a97e7d35e245b270d67dfef78741e1:1
+    charms:
+      $BRO: 4900000000
+
+# ------------------------------------------------------------------------------
+# Outputs
+# ------------------------------------------------------------------------------
+
+outs:
+  # Output 0: New order at fresh Scrolls address
+  # 99 BRO total (50 + 49), allowing partial fills
+  - address: bc1qzhdm5ee85jk7xwsue2ewnp9eh886mqkg3sfsem
+    coin: 300
+    charms:
+      $BRO: 9900000000 # 99 BRO
+      $CAST:
+        maker: bc1qn4z8s2f43fkdf2eys0pt23nsm668w3rx472n2s
+        exec_type:
+          partial: {}
+        side: ask
+        price: [1, 400000] # 1 sat per 400,000 units = 250 sats/BRO
+        amount: 24750 # 99 BRO * 250 sats = 24,750 sats
+        quantity: 9900000000
+        asset:
+          token: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f

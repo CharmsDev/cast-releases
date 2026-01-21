@@ -1,0 +1,110 @@
+# ==============================================================================
+# Spell: Partial Order Fulfillment - Phase 3
+# ==============================================================================
+#
+# This spell partially fills a sell order. The taker buys 30 BRO out of the
+# 99 BRO available, leaving a remainder order for the remaining 69 BRO.
+#
+# Scenario:
+#   - Order: Selling 99 BRO for 24,750 sats (250 sats per BRO)
+#   - Taker buys: 30 BRO for 7,500 sats
+#   - Remainder: 69 BRO for 17,250 sats
+#   - Taker fee: 7,500 * 50 / 10,000 = 37 sats
+#
+# Order UTXO: 75681f0f1d8adacfee1506330560b28b7fe11bc666f8d6e791b19d79a5c9291c:0
+# Order Scrolls address: bc1qzhdm5ee85jk7xwsue2ewnp9eh886mqkg3sfsem
+# Order Scrolls nonce: 2592674606473911827
+#
+# Funding UTXO: 75681f0f1d8adacfee1506330560b28b7fe11bc666f8d6e791b19d79a5c9291c:3
+#   - 35,883 sats (change from Phase 2)
+#
+# ==============================================================================
+
+version: 9
+
+apps:
+  # Cast DEX v0.2 contract
+  $CAST: b/0000000000000000000000000000000000000000000000000000000000000000/a471d3fcc436ae7cbc0e0c82a68cdc8e003ee21ef819e1acf834e11c43ce47d8
+  # BRO token
+  $BRO: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f
+
+# ------------------------------------------------------------------------------
+# Private Inputs
+# ------------------------------------------------------------------------------
+# For fulfillment, we only need the signed params (no edit_orders).
+
+private_inputs:
+  $CAST:
+    params:
+      - fulfill:
+          app: b/0000000000000000000000000000000000000000000000000000000000000000/a471d3fcc436ae7cbc0e0c82a68cdc8e003ee21ef819e1acf834e11c43ce47d8
+          fee_config:
+            taker_fee: 50
+            matcher_fee: 2000
+            fee_address: bc1qxxxjm06n50uugxewxe5r5w5tskqwq4gkwrm0al
+          min_value: 10000
+      - 20f0aa694f7382a64cce14ebffa9f62428d4655c4f53826f1b745b556205edda317b64649a68f214e3fd533929875e5576d6f9293cfda7ea80924ffeb16bbf07ea
+
+# ------------------------------------------------------------------------------
+# Inputs
+# ------------------------------------------------------------------------------
+
+ins:
+  # Input 0: The sell order to partially fill
+  - utxo_id: 75681f0f1d8adacfee1506330560b28b7fe11bc666f8d6e791b19d79a5c9291c:0
+    charms:
+      $BRO: 9900000000  # 99 BRO
+      $CAST:
+        maker: bc1qn4z8s2f43fkdf2eys0pt23nsm668w3rx472n2s
+        exec_type:
+          partial: {}
+        side: ask
+        price: [1, 400000]  # 250 sats per BRO
+        amount: 24750
+        quantity: 9900000000
+        asset:
+          token: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f
+
+  # Input 1: Taker's funding UTXO (provides sats for maker payment and fees)
+  - utxo_id: 75681f0f1d8adacfee1506330560b28b7fe11bc666f8d6e791b19d79a5c9291c:3
+
+# ------------------------------------------------------------------------------
+# Outputs
+# ------------------------------------------------------------------------------
+
+outs:
+  # Output 0: Taker receives 30 BRO
+  - address: bc1qasm6srsv48tp2gqs6ja9quuml0ztaeztarx2x0
+    coin: 300
+    charms:
+      $BRO: 3000000000  # 30 BRO
+
+  # Output 1: Remainder order - 69 BRO still for sale
+  # Must stay at the SAME Scrolls address as the original order
+  - address: bc1qzhdm5ee85jk7xwsue2ewnp9eh886mqkg3sfsem
+    coin: 300
+    charms:
+      $BRO: 6900000000  # 69 BRO
+      $CAST:
+        maker: bc1qn4z8s2f43fkdf2eys0pt23nsm668w3rx472n2s
+        exec_type:
+          partial:
+            from: 75681f0f1d8adacfee1506330560b28b7fe11bc666f8d6e791b19d79a5c9291c:0
+        side: ask
+        price: [1, 400000]
+        amount: 17250  # 69 BRO * 250 sats = 17,250 sats
+        quantity: 6900000000
+        asset:
+          token: t/3d7fe7e4cea6121947af73d70e5119bebd8aa5b7edfe74bfaf6e779a1847bd9b/c975d4e0c292fb95efbda5c13312d6ac1d8b5aeff7f0f1e5578645a2da70ff5f
+
+  # Output 2: Maker receives BTC for the filled portion
+  # Filled: 30 BRO at 250 sats/BRO = 7,500 sats + 300 dust offset
+  - address: bc1qn4z8s2f43fkdf2eys0pt23nsm668w3rx472n2s
+    coin: 7800
+
+  # Output 3: Fee output
+  # Taker fee: 7,500 * 50 / 10,000 = 37 sats
+  # Scrolls protocol fee: 895 + 64 * 1 input = 959 sats minimum
+  # Total: 37 + 959 = 996, rounded to 1000 sats
+  - address: bc1qxxxjm06n50uugxewxe5r5w5tskqwq4gkwrm0al
+    coin: 1000
